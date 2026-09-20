@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实习日志手账本</title>
+<style>
+/* ============================================================
+   实习日志手账本 · 复古欧式手账风格
+   v1.0 · 2026-09-21 · 单文件 / 零依赖 / localStorage 本地存储
+   ============================================================ */
+:root{
+  --bg:#cba680;            /* 网页背景 浅焦糖棕 */
+  --paper:#f7edcf;         /* 本子主背景 米黄羊皮纸 */
+  --panel:#fff8df;         /* 面板背景 更浅米黄纸 */
+  --input:#faf2da;         /* 输入框 泛黄米白纸 */
+  --ink:#4b3b35;           /* 主文字 深棕墨 */
+  --ink2:#927665;          /* 次要文字 灰棕 */
+  --line:#ddc99e;          /* 边框线 浅棕 */
+  --line2:#d8c19a;
+  --btn1:#b8aad4;          /* 按钮 香芋紫渐变 */
+  --btn2:#9c8cbe;
+  --btn-text:#fbf3dc;
+  --gold:#a67c2e;          /* 强调 金棕 */
+  --early1:#d4956a; --early2:#b8784a;   /* 早班 焦糖橙 */
+  --late1:#8a7ab0;  --late2:#6e5e9a;    /* 晚班 深紫 */
+  --rest1:#a8b89a;  --rest2:#8a9a78;    /* 休息 橄榄绿 */
+  --danger1:#f0b8c8; --danger2:#e89aaf; /* 危险 粉红 */
+  --shadow:0 6px 22px rgba(74,55,34,.28);
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ min-height:100%; }
+body{
+  background-color:var(--bg);
+  /* 点状纹理 */
+  background-image:radial-gradient(rgba(90,62,30,.10) 1px, transparent 1.2px);
+  background-size:20px 20px;
+  color:var(--ink);
+  font-family:Georgia,'微软雅黑','Microsoft YaHei',sans-serif;
+  font-size:15px;
+  line-height:1.6;
+  padding:18px 12px 30px;
+}
+/* ---------- 巴洛克卷草纹 四角 ---------- */
+.orn{ position:fixed; width:150px; height:150px; opacity:.32; pointer-events:none; z-index:0; }
+.orn.tl{ top:-6px; left:-6px; }
+.orn.tr{ top:-6px; right:-6px; transform:rotate(90deg); }
+.orn.br{ bottom:-6px; right:-6px; transform:rotate(180deg); }
+.orn.bl{ bottom:-6px; left:-6px; transform:rotate(270deg); }
+/* 右上角 淡粉紫星星 */
+.page-star{ position:fixed; top:14px; right:16px; width:34px; height:34px; opacity:.55; z-index:0; pointer-events:none; }
+
+/* ---------- 本子主体 ---------- */
+.page{
+  position:relative;
+  max-width:1200px;
+  margin:0 auto;
+  background:var(--paper);
+  border:1px solid var(--line2);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:16px 20px 10px 26px;
+  z-index:1;
+}
+/* 装订孔 */
+.page::before{
+  content:''; position:absolute; left:8px; top:16px; bottom:16px; width:5px;
+  background-image:radial-gradient(circle, #b49a6c 2px, transparent 2.4px);
+  background-size:5px 34px; background-repeat:repeat-y;
+  opacity:.5;
+}
+/* 装订虚线 */
+.page::after{
+  content:''; position:absolute; left:17px; top:14px; bottom:14px; width:0;
+  border-left:1.5px dashed #c8ad7d; opacity:.55;
+}
+
+/* ---------- 标题区 ---------- */
+header{
+  text-align:center; padding:6px 0 14px; position:relative;
+}
+header h1{
+  font-family:'KaiTi','STKaiti','楷体',Georgia,serif;
+  font-size:34px; letter-spacing:4px; color:var(--ink);
+  text-shadow:1px 1px 0 rgba(255,255,255,.4);
+}
+header .subtitle{
+  font-size:13px; color:var(--ink2); letter-spacing:2px; margin-top:2px;
+}
+.header-actions{
+  margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+}
+
+/* ---------- 按钮 ---------- */
+button{
+  font-family:'KaiTi','STKaiti','楷体','Microsoft YaHei',sans-serif;
+  border:none; cursor:pointer; user-select:none;
+  border-radius:8px;
+  color:var(--btn-text);
+  background:linear-gradient(180deg,var(--btn1),var(--btn2));
+  padding:7px 14px; font-size:14px; letter-spacing:1px;
+  box-shadow:0 3px 0 rgba(90,70,120,.45), inset 0 0 0 1.5px rgba(251,243,220,.35);
+  position:relative;
+  transition:transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+button:hover{ transform:translateY(-1px); filter:brightness(1.08); }
+button:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(90,70,120,.45), inset 0 0 0 1.5px rgba(251,243,220,.35); }
+button.small{ padding:4px 10px; font-size:12px; border-radius:6px; }
+button.primary{ background:linear-gradient(180deg,var(--btn1),var(--btn2)); }
+button.danger{ background:linear-gradient(180deg,var(--danger1),var(--danger2)); box-shadow:0 3px 0 rgba(150,80,100,.4), inset 0 0 0 1.5px rgba(255,255,255,.3); }
+button.ghost{
+  background:var(--input); color:var(--ink);
+  border:1px solid var(--line); box-shadow:0 2px 0 rgba(90,70,120,.12);
+}
+button.ghost:hover{ border-color:var(--gold); color:var(--gold); }
+button.on{ filter:brightness(1.06); box-shadow:0 3px 0 rgba(0,0,0,.22), inset 0 0 0 2px rgba(255,255,255,.5); }
+button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+
+/* ---------- 主布局 ---------- */
+main{
+  display:grid; grid-template-columns:340px 1fr; gap:16px; align-items:start;
+}
+/* ---------- 面板通用 ---------- */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line2);
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(74,55,34,.12);
+  padding:12px 12px 14px;
+  position:relative;
+  margin-bottom:16px;
+}
+/* 内部金棕虚线内框 */
+.panel::before{
+  content:''; position:absolute; inset:5px; border:1.5px dashed var(--gold);
+  border-radius:7px; opacity:.4; pointer-events:none;
+}
+.panel-title{
+  font-family:'KaiTi','STKaiti','楷体',Georgia,serif;
+  font-size:18px; letter-spacing:2px; color:var(--gold);
+  margin:2px 0 10px; display:flex; align-items:center; gap:6px;
+}
+.panel-title::after{ content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); margin-left:6px; }
+
+/* ---------- 左侧操作行 ---------- */
+.row-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+
+/* ---------- 统计栏 ---------- */
+.stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+.stat-box{
+  background:var(--input); border:1px solid var(--line); border-radius:8px;
+  padding:6px 4px; text-align:center;
+}
+.stat-box .num{ font-size:20px; font-weight:bold; color:var(--ink); font-family:Georgia,serif; }
+.stat-box .lab{ font-size:11px; color:var(--ink2); letter-spacing:1px; }
+.salary-box{
+  grid-column:1 / -1;
+  background:linear-gradient(135deg,#e6c98f,#d9ab63);
+  border:1px solid #c89a52; border-radius:8px;
+  padding:8px 6px; text-align:center;
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35);
+}
+.salary-box .num{ font-size:24px; color:#5a3d12; font-family:Georgia,serif; }
+.salary-box .lab{ font-size:12px; color:#6d4c16; letter-spacing:2px; }
+
+/* ---------- 视图切换 + 搜索 ---------- */
+.view-switch{ display:flex; gap:8px; margin-bottom:8px; }
+.search-wrap{ position:relative; margin-bottom:10px; }
+.search-wrap input{
+  width:100%; padding:7px 10px 7px 30px; border:1px solid var(--line);
+  border-radius:7px; background:var(--input); color:var(--ink); font-size:14px;
+  font-family:inherit; outline:none; transition:border-color .15s, box-shadow .15s;
+}
+.search-wrap::before{
+  content:'🔍'; position:absolute; left:8px; top:7px; font-size:13px; opacity:.6;
+}
+.search-wrap input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(166,124,46,.18); }
+
+/* ---------- 日志列表 ---------- */
+.log-list{ max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+.log-item{
+  background:var(--input); border:1px solid var(--line); border-radius:8px;
+  padding:6px 8px; cursor:pointer; position:relative;
+  transition:border-color .12s, background .12s;
+}
+.log-item:hover{ border-color:var(--gold); }
+.log-item.active{ border-color:var(--gold); background:#f1e2b8; box-shadow:0 0 0 2px rgba(166,124,46,.2); }
+.log-item .li-top{ display:flex; align-items:center; gap:6px; font-size:13px; }
+.log-item .li-date{ font-weight:bold; color:var(--ink); }
+.log-item .li-sticker{ font-size:16px; }
+.log-item .li-shift{ font-size:11px; color:var(--btn-text); border-radius:4px; padding:0 5px; }
+.log-item .li-hours{ font-size:11px; color:var(--ink2); margin-left:auto; }
+.log-item .li-snippet{
+  font-size:12px; color:var(--ink2); margin-top:2px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; padding-right:26px;
+}
+.log-item .li-del{
+  position:absolute; right:5px; bottom:4px; background:transparent; border:none;
+  color:var(--ink2); font-size:13px; padding:2px 4px; cursor:pointer;
+  box-shadow:none; border-radius:4px;
+}
+.log-item .li-del:hover{ color:var(--danger2); filter:none; transform:none; }
+.empty-tip{ text-align:center; color:var(--ink2); font-size:13px; padding:18px 0; letter-spacing:1px; }
+.empty-tip::before{ content:'✦ '; color:var(--gold); }
+
+/* ---------- 月历 ---------- */
+.cal-head{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; }
+.cal-title{ font-family:'KaiTi','STKaiti','楷体',Georgia,serif; font-size:17px; color:var(--gold); min-width:110px; text-align:center; }
+.cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:5px; max-width:620px; margin-left:auto; margin-right:auto; }
+.cal-week div{ text-align:center; font-size:12px; color:var(--ink2); }
+.cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; max-width:620px; margin:0 auto; }
+.cal-cell{
+  height:82px; background:var(--input); border:1px solid var(--line);
+  border-radius:7px; position:relative; padding:4px; cursor:pointer;
+  transition:border-color .12s, background .12s;
+}
+.cal-cell:hover{ border-color:var(--gold); }
+.cal-cell.has-log{ border-color:var(--gold); background:#f3e5bd; }
+.cal-cell.selected{ background:#ead9ad; box-shadow:0 0 0 2px rgba(166,124,46,.3); }
+.cal-cell.today{ border:2px solid var(--gold); }
+.cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
+.cal-num{ position:absolute; top:3px; left:6px; font-size:12px; color:var(--ink); }
+.cal-num.holiday{ color:#c05a5a; }
+.cal-sticker{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; pointer-events:none; }
+.cal-stamp{
+  position:absolute; top:2px; right:4px;
+  font-family:'KaiTi','STKaiti','楷体',serif; font-size:12px;
+  width:18px; height:18px; line-height:18px; text-align:center;
+  border-radius:3px; transform:rotate(-10deg); opacity:.5; color:#fff;
+}
+.cal-stamp.early{ background:var(--early2); }
+.cal-stamp.late{ background:var(--late2); }
+.cal-stamp.rest{ background:var(--rest2); }
+
+/* ---------- 当日待办 ---------- */
+.todo-add{ display:flex; gap:8px; margin-bottom:8px; }
+.todo-add input{
+  flex:1; padding:6px 9px; border:1px solid var(--line); border-radius:7px;
+  background:var(--input); color:var(--ink); font-size:13px; font-family:inherit; outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.todo-add input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(166,124,46,.18); }
+.todo-list{ display:flex; flex-direction:column; gap:5px; max-height:180px; overflow-y:auto; }
+.todo-item{ display:flex; align-items:center; gap:8px; background:var(--input); border:1px solid var(--line); border-radius:7px; padding:4px 8px; font-size:13px; }
+.todo-item input[type=checkbox]{ accent-color:var(--gold); width:15px; height:15px; cursor:pointer; }
+.todo-item .t-text{ flex:1; word-break:break-all; }
+.todo-item.done .t-text{ text-decoration:line-through; color:var(--ink2); }
+.todo-item .t-del{ background:none; border:none; color:var(--ink2); cursor:pointer; font-size:13px; box-shadow:none; padding:0 3px; }
+.todo-item .t-del:hover{ color:var(--danger2); filter:none; transform:none; }
+
+/* ---------- 右侧编辑面板 ---------- */
+.editor-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.save-state{ font-size:13px; color:var(--ink2); letter-spacing:1px; margin-right:auto; }
+.save-state.saving{ color:var(--gold); }
+.save-state.saved::before{ content:'● '; color:#7aa06a; }
+.editor-meta{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.field{ display:flex; flex-direction:column; gap:3px; }
+.field label{ font-size:12px; color:var(--ink2); letter-spacing:1px; }
+.editor-meta input[type=date], .editor-meta input[type=number]{
+  padding:6px 9px; border:1px solid var(--line); border-radius:7px; background:var(--input);
+  color:var(--ink); font-size:14px; font-family:inherit; outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.editor-meta input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(166,124,46,.18); }
+
+/* 班次按钮 */
+.shift-btns{ display:flex; gap:8px; }
+.shift-btn{
+  padding:6px 16px; font-size:13px; border-radius:7px; border:none; cursor:pointer;
+  color:var(--btn-text); opacity:.55; letter-spacing:1px;
+  transition:transform .12s, opacity .12s, filter .12s;
+}
+.shift-btn:hover{ opacity:.85; }
+.shift-btn.on{ opacity:1; box-shadow:0 3px 0 rgba(0,0,0,.2); }
+.shift-btn.early{ background:linear-gradient(180deg,var(--early1),var(--early2)); }
+.shift-btn.late{ background:linear-gradient(180deg,var(--late1),var(--late2)); }
+.shift-btn.rest{ background:linear-gradient(180deg,var(--rest1),var(--rest2)); }
+
+/* 文本域 */
+.edit-block{ margin-bottom:14px; }
+.edit-block .eb-label{
+  display:flex; align-items:center; gap:4px; font-family:'KaiTi','STKaiti','楷体',Georgia,serif;
+  font-size:15px; letter-spacing:1px; color:var(--gold); margin-bottom:4px;
+}
+.eb-label .req{ color:var(--danger2); font-size:12px; }
+textarea{
+  width:100%; min-height:76px; resize:vertical; padding:9px 11px;
+  border:1px solid var(--line); border-radius:7px; background:var(--input);
+  color:var(--ink); font-size:14px; line-height:1.7; font-family:inherit; outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+textarea:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(166,124,46,.18); }
+textarea#inWork{ min-height:110px; }
+/* 字体切换类 */
+.font-kaiti{ font-family:'KaiTi','STKaiti','楷体',serif; }
+.font-song{ font-family:'SimSun','Songti SC','宋体',serif; }
+.font-hand{ font-family:'KaiTi','STKaiti','楷体',cursive,'Segoe Script',cursive; }
+
+/* 字体切换行 */
+.font-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.font-row .fr-lab{ font-size:13px; color:var(--ink2); letter-spacing:1px; }
+.font-row button{ font-size:12px; padding:4px 10px; }
+.font-row button.on{ box-shadow:0 3px 0 rgba(0,0,0,.22), inset 0 0 0 2px rgba(255,255,255,.5); filter:brightness(1.06); }
+
+/* 心情贴图 */
+.sticker-row{ display:flex; gap:8px; overflow-x:auto; padding:6px 2px 8px; margin-bottom:14px; }
+.sticker-chip{
+  flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:6px 8px; border:1.5px solid var(--line); background:var(--input);
+  border-radius:10px; cursor:pointer; font-size:22px;
+  transition:border-color .12s, background .12s, transform .12s;
+}
+.sticker-chip .n{ font-size:11px; color:var(--ink2); white-space:nowrap; }
+.sticker-chip:hover{ border-color:var(--gold); }
+.sticker-chip.sel{ border-color:var(--gold); background:#f1e2b8; box-shadow:0 0 0 2px rgba(166,124,46,.25); transform:translateY(-2px); }
+
+/* 编辑区底部按钮 */
+.editor-foot{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+
+/* ---------- 页脚 ---------- */
+footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px; letter-spacing:2px; }
+.footer-orn{ display:block; margin:0 auto 6px; width:300px; opacity:.7; }
+
+/* ---------- 弹窗 ---------- */
+.modal-mask{
+  position:fixed; inset:0; background:rgba(60,42,20,.45); z-index:100;
+  display:none; align-items:center; justify-content:center; padding:16px;
+}
+.modal-mask.show{ display:flex; animation:fadeIn .2s ease; }
+.modal{
+  background:var(--paper); border:1px solid var(--line2); border-radius:12px;
+  box-shadow:var(--shadow); max-width:520px; width:100%; max-height:86vh;
+  overflow-y:auto; padding:20px 22px; position:relative;
+  animation:popIn .28s cubic-bezier(.34,1.4,.64,1);
+}
+.modal .m-star{ position:absolute; width:16px; height:16px; opacity:.4; }
+.modal .m-star.s1{ top:8px; left:10px; } .modal .m-star.s2{ top:8px; right:10px; }
+.modal .m-star.s3{ bottom:8px; left:10px; } .modal .m-star.s4{ bottom:8px; right:10px; }
+.modal-title{
+  font-family:'KaiTi','STKaiti','楷体',Georgia,serif; font-size:20px; letter-spacing:2px;
+  color:var(--gold); text-align:center; margin-bottom:14px;
+}
+.modal-body{ font-size:14px; color:var(--ink); }
+.modal-btns{ display:flex; gap:10px; justify-content:center; margin-top:18px; flex-wrap:wrap; }
+@keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+@keyframes popIn{ 0%{opacity:0; transform:scale(.86);} 100%{opacity:1; transform:scale(1);} }
+
+/* 弹窗内表单 */
+.modal-body label.mf{ display:block; font-size:13px; color:var(--ink2); margin:8px 0 3px; letter-spacing:1px; }
+.modal-body input[type=text], .modal-body input[type=password], .modal-body textarea, .modal-body select{
+  width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:7px;
+  background:var(--input); color:var(--ink); font-size:14px; font-family:inherit; outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.modal-body input:focus, .modal-body textarea:focus, .modal-body select:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(166,124,46,.18); }
+.m-hint{ font-size:12px; color:var(--ink2); margin-top:6px; line-height:1.7; }
+
+/* 目录面板 */
+.idx-list{ display:flex; flex-direction:column; gap:6px; max-height:340px; overflow-y:auto; }
+.idx-item{
+  display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--input);
+  border:1px solid var(--line); border-radius:7px; cursor:pointer; font-size:13px;
+}
+.idx-item:hover{ border-color:var(--gold); }
+.idx-item .idx-date{ font-weight:bold; }
+.idx-item .idx-sticker{ font-size:16px; }
+.idx-item .idx-snippet{ color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+
+/* 排班面板 */
+.sched-nav{ display:flex; gap:8px; justify-content:center; margin-bottom:12px; }
+.sched-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:14px; }
+.sched-day{
+  background:var(--input); border:1px solid var(--line); border-radius:8px; padding:8px 6px;
+  text-align:center; display:flex; flex-direction:column; gap:6px; align-items:stretch;
+}
+.sched-day.today{ border:2px solid var(--gold); }
+.sched-date{ font-size:12px; color:var(--ink); margin-bottom:2px; }
+.sched-date .today-tag{ color:var(--gold); font-weight:bold; }
+.sched-btn{
+  padding:5px 0; font-size:12px; border-radius:6px; border:none; cursor:pointer;
+  color:var(--btn-text); opacity:.5; letter-spacing:1px;
+}
+.sched-btn:hover{ opacity:.85; }
+.sched-btn.on{ opacity:1; box-shadow:0 2px 0 rgba(0,0,0,.2); }
+.sched-btn.early{ background:linear-gradient(180deg,var(--early1),var(--early2)); }
+.sched-btn.late{ background:linear-gradient(180deg,var(--late1),var(--late2)); }
+.sched-btn.rest{ background:linear-gradient(180deg,var(--rest1),var(--rest2)); }
+.sched-import{ border-top:1px dashed var(--line); padding-top:12px; display:flex; flex-direction:column; gap:8px; }
+.sched-import .si-btns{ display:flex; gap:8px; flex-wrap:wrap; }
+
+/* Toast */
+.toast{
+  position:fixed; top:18px; left:50%; transform:translateX(-50%) translateY(-140%);
+  background:var(--paper); border:1.5px solid var(--gold); border-radius:10px;
+  box-shadow:var(--shadow); padding:12px 22px; z-index:200; text-align:center;
+  transition:transform .35s cubic-bezier(.34,1.4,.64,1); max-width:88%;
+  opacity:0; pointer-events:none;
+}
+.toast.show{ transform:translateX(-50%) translateY(0); opacity:1; }
+.toast .t-main{ font-family:'KaiTi','STKaiti','楷体',Georgia,serif; font-size:16px; color:var(--ink); letter-spacing:1px; }
+.toast .t-sub{ font-size:12px; color:var(--ink2); margin-top:2px; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width:960px){
+  main{ grid-template-columns:1fr; }
+  .orn{ width:100px; height:100px; }
+}
+@media (max-width:560px){
+  body{ padding:10px 6px 20px; }
+  .page{ padding:12px 12px 8px 18px; }
+  header h1{ font-size:26px; }
+  button{ min-height:40px; }
+  input, textarea, select{ font-size:15px !important; }
+  .cal-cell{ height:60px; }
+  .cal-sticker{ font-size:24px; }
+  .shift-btns{ flex-direction:column; }
+  .sched-grid{ grid-template-columns:repeat(2,1fr); }
+  .stats{ gap:5px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 装饰元素 ============ -->
+<svg class="orn tl" viewBox="0 0 200 200" aria-hidden="true">
+  <g fill="none" stroke="#a67c2e" stroke-width="2.6" stroke-linecap="round">
+    <path d="M6 194 C 6 118, 42 66, 92 52 C 132 42, 172 52, 180 78 C 185 95, 171 110, 155 108 C 140 106, 135 93, 144 85 C 150 79, 159 81, 159 88"/>
+    <path d="M30 172 C 30 122, 62 92, 102 84 C 130 78, 152 84, 154 98 C 155 108, 146 115, 137 111 C 130 108, 130 100, 137 97"/>
+    <path d="M96 52 C 100 38, 114 31, 124 38 C 132 43, 128 55, 117 58 C 109 60, 102 54, 104 48"/>
+    <path d="M44 66 C 38 56, 42 46, 52 48 C 60 50, 58 60, 50 62"/>
+  </g>
+  <circle cx="180" cy="78" r="3" fill="#a67c2e" opacity=".6"/>
+  <circle cx="154" cy="98" r="2.2" fill="#a67c2e" opacity=".5"/>
+  <circle cx="6" cy="194" r="4" fill="#a67c2e" opacity=".45"/>
+</svg>
+<svg class="orn tr" viewBox="0 0 200 200" aria-hidden="true">
+  <g fill="none" stroke="#a67c2e" stroke-width="2.6" stroke-linecap="round">
+    <path d="M6 194 C 6 118, 42 66, 92 52 C 132 42, 172 52, 180 78 C 185 95, 171 110, 155 108 C 140 106, 135 93, 144 85 C 150 79, 159 81, 159 88"/>
+    <path d="M30 172 C 30 122, 62 92, 102 84 C 130 78, 152 84, 154 98 C 155 108, 146 115, 137 111 C 130 108, 130 100, 137 97"/>
+    <path d="M96 52 C 100 38, 114 31, 124 38 C 132 43, 128 55, 117 58 C 109 60, 102 54, 104 48"/>
+    <path d="M44 66 C 38 56, 42 46, 52 48 C 60 50, 58 60, 50 62"/>
+  </g>
+  <circle cx="180" cy="78" r="3" fill="#a67c2e" opacity=".6"/>
+  <circle cx="154" cy="98" r="2.2" fill="#a67c2e" opacity=".5"/>
+  <circle cx="6" cy="194" r="4" fill="#a67c2e" opacity=".45"/>
+</svg>
+<svg class="orn bl" viewBox="0 0 200 200" aria-hidden="true">
+  <g fill="none" stroke="#a67c2e" stroke-width="2.6" stroke-linecap="round">
+    <path d="M6 194 C 6 118, 42 66, 92 52 C 132 42, 172 52, 180 78 C 185 95, 171 110, 155 108 C 140 106, 135 93, 144 85 C 150 79, 159 81, 159 88"/>
+    <path d="M30 172 C 30 122, 62 92, 102 84 C 130 78, 152 84, 154 98 C 155 108, 146 115, 137 111 C 130 108, 130 100, 137 97"/>
+    <path d="M96 52 C 100 38, 114 31, 124 38 C 132 43, 128 55, 117 58 C 109 60, 102 54, 104 48"/>
+    <path d="M44 66 C 38 56, 42 46, 52 48 C 60 50, 58 60, 50 62"/>
+  </g>
+  <circle cx="180" cy="78" r="3" fill="#a67c2e" opacity=".6"/>
+  <circle cx="154" cy="98" r="2.2" fill="#a67c2e" opacity=".5"/>
+  <circle cx="6" cy="194" r="4" fill="#a67c2e" opacity=".45"/>
+</svg>
+<svg class="orn br" viewBox="0 0 200 200" aria-hidden="true">
+  <g fill="none" stroke="#a67c2e" stroke-width="2.6" stroke-linecap="round">
+    <path d="M6 194 C 6 118, 42 66, 92 52 C 132 42, 172 52, 180 78 C 185 95, 171 110, 155 108 C 140 106, 135 93, 144 85 C 150 79, 159 81, 159 88"/>
+    <path d="M30 172 C 30 122, 62 92, 102 84 C 130 78, 152 84, 154 98 C 155 108, 146 115, 137 111 C 130 108, 130 100, 137 97"/>
+    <path d="M96 52 C 100 38, 114 31, 124 38 C 132 43, 128 55, 117 58 C 109 60, 102 54, 104 48"/>
+    <path d="M44 66 C 38 56, 42 46, 52 48 C 60 50, 58 60, 50 62"/>
+  </g>
+  <circle cx="180" cy="78" r="3" fill="#a67c2e" opacity=".6"/>
+  <circle cx="154" cy="98" r="2.2" fill="#a67c2e" opacity=".5"/>
+  <circle cx="6" cy="194" r="4" fill="#a67c2e" opacity=".45"/>
+</svg>
+<svg class="page-star" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M20 2 C22 10 27 15 38 20 C27 25 22 30 20 38 C18 30 13 25 2 20 C13 15 18 10 20 2 Z" fill="#c9b6d8"/>
+</svg>
+
+<div class="page">
+  <!-- ============ 标题区 ============ -->
+  <header>
+    <h1>实习日志手账本</h1>
+    <p class="subtitle">✦ 记录每一天的实习点滴 ✦</p>
+    <div class="header-actions">
+      <button id="btnNew" class="primary">✏️ 新增</button>
+      <button id="btnClear" class="danger">🗑️ 清空内容</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ 左侧面板 ============ -->
+    <aside>
+      <section class="panel">
+        <div class="panel-title">📖 我的记录</div>
+        <div class="row-actions">
+          <button id="btnExport" class="small ghost">导出</button>
+          <button id="btnSync" class="small ghost">☁ 同步</button>
+          <button id="btnSchedule" class="small ghost">📅 排班</button>
+          <button id="btnImportTxt" class="small ghost">导入TXT</button>
+        </div>
+
+        <!-- 统计栏 -->
+        <div class="stats">
+          <div class="stat-box"><div class="num" id="stCount">0</div><div class="lab">日志篇数</div></div>
+          <div class="stat-box"><div class="num" id="stHours">0</div><div class="lab">累计工时</div></div>
+          <div class="stat-box"><div class="num" id="stWorkdays">0</div><div class="lab">工作日</div></div>
+          <div class="salary-box"><div class="num" id="stSalary">¥0.00</div><div class="lab">累计薪资 · 120元/天</div></div>
+        </div>
+
+        <!-- 视图切换 -->
+        <div class="view-switch">
+          <button id="btnListView" class="small on">列表</button>
+          <button id="btnCalView" class="small ghost">月历</button>
+        </div>
+
+        <!-- 搜索 -->
+        <div class="search-wrap">
+          <input type="text" id="searchInput" placeholder="搜索工作内容 / 复盘 / 问题 / 计划…">
+        </div>
+
+        <!-- 日志列表 -->
+        <div class="log-list" id="logList"></div>
+
+        <!-- 月历 -->
+        <div id="calWrap" style="display:none;">
+          <div class="cal-head">
+            <button id="calPrev" class="small ghost">‹ 上月</button>
+            <span class="cal-title" id="calTitle"></span>
+            <button id="calNext" class="small ghost">下月 ›</button>
+            <button id="calToday" class="small ghost">本月</button>
+          </div>
+          <div class="cal-week"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+      </section>
+
+      <!-- 当日待办 -->
+      <section class="panel">
+        <div class="panel-title">📌 当日待办</div>
+        <div class="todo-add">
+          <input type="text" id="todoInput" placeholder="添加待办事项…">
+          <button id="btnAddTodo" class="small primary">添加</button>
+        </div>
+        <div class="todo-list" id="todoList"></div>
+      </section>
+    </aside>
+
+    <!-- ============ 右侧编辑面板 ============ -->
+    <section class="panel editor">
+      <div class="editor-head">
+        <span class="save-state saved" id="saveState">已保存</span>
+        <button id="btnIndex" class="small ghost">📑 目录</button>
+        <button id="btnPrev" class="small ghost">‹ 上一篇</button>
+        <button id="btnNext" class="small ghost">下一篇 ›</button>
+      </div>
+
+      <div class="editor-meta">
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="inDate">
+        </div>
+        <div class="field">
+          <label>工时（0-24）</label>
+          <input type="number" id="inHours" min="0" max="24" step="0.5" placeholder="8">
+        </div>
+        <div class="field">
+          <label>班次</label>
+          <div class="shift-btns">
+            <button class="shift-btn early" data-shift="早" onclick="clickShift('早')">早班</button>
+            <button class="shift-btn late" data-shift="晚" onclick="clickShift('晚')">晚班</button>
+            <button class="shift-btn rest" data-shift="休" onclick="clickShift('休')">休息</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-block">
+        <div class="eb-label">今日工作内容 <span class="req">*必填</span></div>
+        <textarea id="inWork" placeholder="今天做了什么？学到了什么？"></textarea>
+      </div>
+      <div class="edit-block">
+        <div class="eb-label">复盘与心得</div>
+        <textarea id="inLearning" placeholder="今天有什么感悟与反思…"></textarea>
+      </div>
+      <div class="edit-block">
+        <div class="eb-label">遇到的问题</div>
+        <textarea id="inProblems" placeholder="遇到了哪些问题？"></textarea>
+      </div>
+      <div class="edit-block">
+        <div class="eb-label">明日计划</div>
+        <textarea id="inPlan" placeholder="明天打算做什么？"></textarea>
+      </div>
+
+      <!-- 字体切换 -->
+      <div class="font-row">
+        <span class="fr-lab">字体：</span>
+        <button class="small ghost" data-font="default" onclick="applyFont('default')">默认</button>
+        <button class="small ghost" data-font="kaiti" onclick="applyFont('kaiti')">楷体</button>
+        <button class="small ghost" data-font="song" onclick="applyFont('song')">宋体</button>
+        <button class="small ghost" data-font="hand" onclick="applyFont('hand')">手写体</button>
+      </div>
+
+      <!-- 心情贴图 -->
+      <div class="eb-label">心情贴图</div>
+      <div class="sticker-row" id="stickerRow"></div>
+
+      <div class="editor-foot">
+        <button id="btnDelete" class="danger">🗑 删除这篇</button>
+        <button id="btnSave" class="primary">💾 保存日志</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 页脚 ============ -->
+  <footer>
+    <svg class="footer-orn" viewBox="0 0 420 40" aria-hidden="true">
+      <g fill="none" stroke="#a67c2e" stroke-width="2" stroke-linecap="round">
+        <path d="M4 20 C 44 6, 86 6, 116 20 C 146 32, 176 30, 198 21"/>
+        <path d="M416 20 C 376 6, 334 6, 304 20 C 274 32, 244 30, 222 21"/>
+        <path d="M210 20 C 213 8, 227 8, 230 20 C 227 30, 213 30, 210 20 Z" fill="#a67c2e" stroke="none"/>
+      </g>
+      <circle cx="116" cy="20" r="2.4" fill="#a67c2e" opacity=".7"/>
+      <circle cx="304" cy="20" r="2.4" fill="#a67c2e" opacity=".7"/>
+    </svg>
+    本地保存 · 每一页都是你走过的路
+  </footer>
+</div>
+
+<!-- ============ 弹窗 ============ -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal" id="modalBox">
+    <svg class="m-star s1" viewBox="0 0 24 24"><path d="M12 2 L13.6 8.4 L20 10 L13.6 11.6 L12 18 L10.4 11.6 L4 10 L10.4 8.4 Z" fill="#a67c2e"/></svg>
+    <svg class="m-star s2" viewBox="0 0 24 24"><path d="M12 2 L13.6 8.4 L20 10 L13.6 11.6 L12 18 L10.4 11.6 L4 10 L10.4 8.4 Z" fill="#a67c2e"/></svg>
+    <svg class="m-star s3" viewBox="0 0 24 24"><path d="M12 2 L13.6 8.4 L20 10 L13.6 11.6 L12 18 L10.4 11.6 L4 10 L10.4 8.4 Z" fill="#a67c2e"/></svg>
+    <svg class="m-star s4" viewBox="0 0 24 24"><path d="M12 2 L13.6 8.4 L20 10 L13.6 11.6 L12 18 L10.4 11.6 L4 10 L10.4 8.4 Z" fill="#a67c2e"/></svg>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-btns" id="modalBtns"></div>
+  </div>
+</div>
+<div class="toast" id="toast"><div class="t-main" id="toastMain"></div><div class="t-sub" id="toastSub"></div></div>
+<input type="file" id="fileImport" accept=".txt,text/plain" style="display:none;">
+
+<script>
+/* ============================================================
+   实习日志手账本 · 逻辑脚本
+   ============================================================ */
+'use strict';
+const $ = id => document.getElementById(id);
+
+/* ---------- 常量与数据键 ---------- */
+const LS_LOGS   = 'internship-logs-v1';
+const LS_SHIFTS = 'intern-shifts-v1';
+const LS_FONT   = 'journal-font';
+const LS_TOKEN  = 'sync-gist-token';
+const LS_GID    = 'sync-gist-id';
+const DAY_SALARY = 120;          // 日薪 120元/天
+const SHIFT_COLORS = {早:'early', 晚:'late', 休:'rest'};
+
+/* 18 个心情贴图（原神风表情包） */
+const STICKERS = [
+  {name:'拜托拜托', emoji:'🙏'}, {name:'抱大腿', emoji:'🦵'},
+  {name:'吃惊', emoji:'😲'},     {name:'呆呆', emoji:'😶'},
+  {name:'肚子好饿', emoji:'🍽️'}, {name:'干饭时间', emoji:'🍚'},
+  {name:'干劲满满', emoji:'💪'}, {name:'开心团建', emoji:'🎉'},
+  {name:'囊中羞涩', emoji:'🪙'}, {name:'平平淡淡', emoji:'🌤️'},
+  {name:'轻松完成', emoji:'😌'}, {name:'身体被掏空', emoji:'🫠'},
+  {name:'收货满满', emoji:'📦'}, {name:'想骂人', emoji:'😤'},
+  {name:'压力山大', emoji:'😩'}, {name:'要没钱了', emoji:'💸'},
+  {name:'长舒口气', emoji:'😮‍💨'}, {name:'摸鱼中', emoji:'🐟'}
+];
+const WEEK_NAMES = ['周一','周二','周三','周四','周五','周六','周日'];
+
+/* ---------- 状态 ---------- */
+let logs = loadJSON(LS_LOGS, []);
+let shifts = loadJSON(LS_SHIFTS, {});
+let currentDate = todayStr();
+let selectedShift = null;   // '早' | '晚' | '休' | null
+let selectedSticker = null;
+let fontPref = localStorage.getItem(LS_FONT) || 'default';
+let dirty = false;
+let saveTimer = null;
+let currentView = 'list';
+let calYear = 0, calMonth = 0;      // 月历当前年月
+let schedOffset = 0;                // 排班表周偏移
+let calSelected = null;
+
+/* ---------- 基础工具 ---------- */
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function parseDate(s){
+  const p = s.split('-').map(Number);
+  return new Date(p[0], p[1]-1, p[2]);
+}
+function addDays(date, n){
+  const d = new Date(date); d.setDate(d.getDate()+n); return d;
+}
+function loadJSON(k, def){
+  try{ const v = JSON.parse(localStorage.getItem(k)); return (v === null || v === undefined) ? def : v; }
+  catch(e){ return def; }
+}
+function saveJSON(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function getLog(date){ return logs.find(l => l.date === date); }
+/* 有正文的日志（列表/统计/导航只用这些） */
+function contentLogs(){ return logs.filter(l => (l.work||'').trim() !== ''); }
+
+/* ---------- 弹窗系统（复古风格，禁用原生 alert/confirm） ---------- */
+function openModal(title, bodyHTML, buttons){
+  $('modalTitle').textContent = title;
+  $('modalBody').innerHTML = bodyHTML;
+  const btns = $('modalBtns'); btns.innerHTML = '';
+  (buttons || []).forEach(b => {
+    const el = document.createElement('button');
+    el.className = (b.cls || 'ghost') + (b.small ? ' small' : '');
+    el.textContent = b.label;
+    el.onclick = () => { if(b.onClick) b.onClick(); };
+    btns.appendChild(el);
+  });
+  $('modalMask').classList.add('show');
+}
+function closeModal(){ $('modalMask').classList.remove('show'); }
+function confirmDialog(msg, onYes, okText){
+  openModal('请确认', '<p style="text-align:center;padding:6px 0;">'+msg+'</p>', [
+    {label:'取消', cls:'ghost', onClick:closeModal},
+    {label: okText || '确认', cls:'danger', onClick:()=>{ closeModal(); onYes(); }}
+  ]);
+}
+function toast(main, sub){
+  $('toastMain').textContent = main;
+  $('toastSub').textContent = sub || '';
+  const t = $('toast'); t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+$('modalMask').addEventListener('click', e => { if(e.target === $('modalMask')) closeModal(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+/* ---------- 编辑区：加载 / 读取 ---------- */
+const ED_FIELDS = ['work','learning','problems','plan'];
+function loadEditor(date){
+  // 若有未保存变更先落盘
+  if(dirty) saveNow(false);
+  currentDate = date;
+  const log = getLog(date);
+  $('inDate').value = date;
+  $('inHours').value = log && log.hours ? log.hours : '';
+  $('inWork').value   = log ? log.work    : '';
+  $('inLearning').value = log ? log.learning : '';
+  $('inProblems').value = log ? log.problems : '';
+  $('inPlan').value   = log ? log.plan    : '';
+  selectedShift = (log && log.shift) || shifts[date] || null;
+  selectedSticker = log ? log.sticker : null;
+  updateShiftUI(); updateStickerUI(); renderTodos(date);
+  setSaveState('saved');
+  dirty = false;
+  calSelected = date;
+  renderCalendar();
+}
+function readEditor(){
+  const d = $('inDate').value;
+  if(!d) return null;
+  const old = getLog(d);
+  // 班次：选中的写入 shifts，未选则移除（未选 = 默认休息，不出印章）
+  if(selectedShift) shifts[d] = selectedShift; else delete shifts[d];
+  return {
+    date: d,
+    hours: parseFloat($('inHours').value) || 0,
+    work: $('inWork').value,
+    learning: $('inLearning').value,
+    problems: $('inProblems').value,
+    plan: $('inPlan').value,
+    sticker: selectedSticker,
+    shift: selectedShift,
+    todos: old ? old.todos : []
+  };
+}
+function upsertLog(log){
+  const i = logs.findIndex(l => l.date === log.date);
+  if(i >= 0) logs[i] = log; else logs.push(log);
+}
+function setSaveState(s){
+  const el = $('saveState');
+  if(s === 'saving'){ el.textContent = '编辑中…'; el.className = 'save-state saving'; }
+  else { el.textContent = '已保存'; el.className = 'save-state saved'; }
+}
+
+/* ---------- 保存 ---------- */
+function onEditorInput(){
+  dirty = true; setSaveState('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=> saveNow(false), 1200);   // 延迟 1.2s 自动保存
+}
+function saveNow(showToast){
+  clearTimeout(saveTimer);
+  const log = readEditor();
+  if(!log){ return; }
+  if(!log.work.trim()){ dirty = false; setSaveState('saved'); return; } // 空正文不生成日志
+  upsertLog(log);
+  saveJSON(LS_LOGS, logs); saveJSON(LS_SHIFTS, shifts);
+  dirty = false; setSaveState('saved');
+  renderAll();
+  if(showToast) toast('保存成功', '今天也是收获满满的一天呢~');
+}
+/* 手动保存按钮 */
+function saveClick(){
+  if(!dirty){ return; }              // 无未保存变更时不弹窗
+  const log = readEditor();
+  if(!log || !log.work.trim()){
+    openModal('提示', '<p style="text-align:center;padding:6px 0;">请填写工作内容</p>', [{label:'好的', cls:'primary', onClick:closeModal}]);
+    return;
+  }
+  saveNow(true);
+  openModal('保存成功', '<p style="text-align:center;padding:6px 0;">今天也是收获满满的一天呢~</p>', [{label:'好的', cls:'primary', onClick:closeModal}]);
+}
+/* 清空当前编辑区 */
+function clearContent(){
+  confirmDialog('确定要清空当前编辑区的内容吗？', ()=>{
+    $('inHours').value=''; $('inWork').value=''; $('inLearning').value='';
+    $('inProblems').value=''; $('inPlan').value='';
+    selectedSticker = null; selectedShift = null;
+    updateStickerUI(); updateShiftUI();
+    dirty = true; setSaveState('saving');
+    clearTimeout(saveTimer); saveTimer = setTimeout(()=> saveNow(false), 1200);
+  });
+}
+/* 删除当前这篇 */
+function deleteLog(){
+  confirmDialog('确定要删除这篇日志吗？删除后不可恢复。', ()=>{
+    logs = logs.filter(l => l.date !== currentDate);
+    saveJSON(LS_LOGS, logs);
+    loadEditor(todayStr()); renderAll();
+    toast('已删除', '这篇日志已被移除');
+  }, '删除');
+}
+/* 日期变化：保存旧日期内容后切换 */
+function onDateChange(){
+  if(dirty) saveNow(false);
+  const d = $('inDate').value;
+  if(d){ loadEditor(d); } else { $('inDate').value = currentDate; }
+}
+
+/* ---------- 班次（编辑区） ---------- */
+function clickShift(s){
+  if(selectedShift === s) selectedShift = null; else selectedShift = s;
+  updateShiftUI(); onEditorInput();
+}
+function updateShiftUI(){
+  document.querySelectorAll('.shift-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.shift === selectedShift);
+  });
+}
+
+/* ---------- 心情贴图 ---------- */
+function renderStickers(){
+  const row = $('stickerRow');
+  row.innerHTML = STICKERS.map(s =>
+    `<div class="sticker-chip ${selectedSticker === s.name ? 'sel':''}" data-name="${s.name}" title="${s.name}">
+       <span>${s.emoji}</span><span class="n">${s.name}</span>
+     </div>`).join('');
+  row.querySelectorAll('.sticker-chip').forEach(chip => {
+    chip.onclick = () => {
+      selectedSticker = (selectedSticker === chip.dataset.name) ? null : chip.dataset.name;
+      updateStickerUI(); onEditorInput();
+    };
+  });
+}
+function updateStickerUI(){
+  document.querySelectorAll('#stickerRow .sticker-chip').forEach(chip => {
+    chip.classList.toggle('sel', chip.dataset.name === selectedSticker);
+  });
+}
+function stickerEmoji(name){ const s = STICKERS.find(x => x.name === name); return s ? s.emoji : ''; }
+
+/* ---------- 字体切换 ---------- */
+function applyFont(f){
+  fontPref = f;
+  localStorage.setItem(LS_FONT, f);
+  const tas = [$('inWork'), $('inLearning'), $('inProblems'), $('inPlan')];
+  tas.forEach(t => t.classList.remove('font-kaiti','font-song','font-hand'));
+  if(f !== 'default') tas.forEach(t => t.classList.add('font-'+f));
+  document.querySelectorAll('.font-row button').forEach(b => {
+    b.classList.toggle('on', b.dataset.font === f);
+  });
+}
+
+/* ---------- 列表视图 ---------- */
+function renderList(){
+  const kw = $('searchInput').value.trim().toLowerCase();
+  let list = contentLogs().sort((a,b)=> b.date.localeCompare(a.date));
+  if(kw){
+    list = list.filter(l =>
+      [l.work,l.learning,l.problems,l.plan].join(' ').toLowerCase().includes(kw));
+  }
+  const box = $('logList');
+  if(!list.length){
+    box.innerHTML = '<div class="empty-tip">还没有记录，写下今天的第一行吧。</div>';
+    return;
+  }
+  box.innerHTML = list.map(l => {
+    const st = l.shift || shifts[l.date];
+    const stamp = st && SHIFT_COLORS[st]
+      ? `<span class="li-shift" style="background:var(--${SHIFT_COLORS[st]}-2);">${st}</span>` : '';
+    const firstLine = (l.work||'').split('\n')[0].trim();
+    return `<div class="log-item ${l.date === currentDate ? 'active':''}" data-date="${l.date}">
+      <div class="li-top">
+        <span class="li-sticker">${stickerEmoji(l.sticker)}</span>
+        <span class="li-date">${l.date}</span>
+        ${stamp}
+        <span class="li-hours">${l.hours ? l.hours+'h' : ''}</span>
+      </div>
+      <div class="li-snippet">${esc(firstLine)}</div>
+      <button class="li-del" title="删除">✕</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.log-item').forEach(item => {
+    item.onclick = (e) => { if(e.target.classList.contains('li-del')) return; loadEditor(item.dataset.date); renderList(); };
+    item.querySelector('.li-del').onclick = (e) => {
+      e.stopPropagation();
+      confirmDialog('确定要删除 <b>'+item.dataset.date+'</b> 的日志吗？', ()=>{
+        logs = logs.filter(l => l.date !== item.dataset.date);
+        saveJSON(LS_LOGS, logs);
+        if(item.dataset.date === currentDate) loadEditor(todayStr());
+        renderAll(); toast('已删除');
+      }, '删除');
+    };
+  });
+}
+
+/* ---------- 月历视图 ---------- */
+function initCal(){ const t = new Date(); calYear = t.getFullYear(); calMonth = t.getMonth(); }
+function renderCalendar(){
+  const grid = $('calGrid');
+  if(!$('calWrap').style.display) renderCalendarInner(grid);
+  else renderCalendarInner(grid);
+}
+function renderCalendarInner(grid){
+  $('calTitle').textContent = calYear + '年' + (calMonth+1) + '月';
+  const today = todayStr();
+  const first = new Date(calYear, calMonth, 1);
+  const offset = (first.getDay() + 6) % 7;             // 周一开头
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const logMap = {};
+  contentLogs().forEach(l => logMap[l.date] = l);
+  let html = '';
+  for(let i=0; i<offset; i++) html += '<div class="cal-cell empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = fmtDate(new Date(calYear, calMonth, d));
+    const l = logMap[ds];
+    const cls = ['cal-cell'];
+    if(ds === today) cls.push('today');
+    if(l) cls.push('has-log');
+    if(ds === calSelected) cls.push('selected');
+    const wd = (offset + d - 1) % 7;                    // 0=周一..6=周日
+    const numCls = (wd === 5 || wd === 6) ? 'cal-num holiday' : 'cal-num';
+    const stamp = shifts[ds] && SHIFT_COLORS[shifts[ds]]
+      ? `<span class="cal-stamp ${SHIFT_COLORS[shifts[ds]]}">${shifts[ds]}</span>` : '';
+    const sticker = l && l.sticker
+      ? `<span class="cal-sticker">${stickerEmoji(l.sticker)}</span>` : '';
+    html += `<div class="${cls.join(' ')}" data-date="${ds}">
+      <span class="${numCls}">${d}</span>${stamp}${sticker}
+    </div>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.cal-cell:not(.empty)').forEach(cell => {
+    cell.onclick = () => { loadEditor(cell.dataset.date); renderCalendar(); };
+  });
+}
+function calPrev(){ calMonth--; if(calMonth<0){ calMonth=11; calYear--; } renderCalendar(); }
+function calNext(){ calMonth++; if(calMonth>11){ calMonth=0; calYear++; } renderCalendar(); }
+function calGoToday(){ const t=new Date(); calYear=t.getFullYear(); calMonth=t.getMonth(); renderCalendar(); }
+
+/* ---------- 视图切换 ---------- */
+function switchView(v){
+  currentView = v;
+  $('logList').style.display = v === 'list' ? 'flex' : 'none';
+  $('calWrap').style.display  = v === 'calendar' ? 'block' : 'none';
+  $('btnListView').classList.toggle('on', v === 'list');
+  $('btnListView').classList.toggle('ghost', v !== 'list');
+  $('btnCalView').classList.toggle('on', v === 'calendar');
+  $('btnCalView').classList.toggle('ghost', v !== 'calendar');
+  if(v === 'calendar') renderCalendar();
+}
+
+/* ---------- 统计栏 ---------- */
+function renderStats(){
+  const cls = contentLogs();
+  $('stCount').textContent = cls.length;
+  $('stHours').textContent = cls.reduce((s,l)=> s + (+l.hours||0), 0);
+  let workdays = 0;
+  for(const d in shifts){ if(shifts[d] === '早' || shifts[d] === '晚') workdays++; }
+  $('stWorkdays').textContent = workdays;
+  $('stSalary').textContent = '¥' + (workdays * DAY_SALARY).toFixed(2);
+}
+
+/* ---------- 当日待办 ---------- */
+function renderTodos(date){
+  const l = getLog(date);
+  const todos = l ? l.todos : [];
+  const box = $('todoList');
+  if(!todos.length){ box.innerHTML = '<div class="empty-tip">这一天还没有待办。</div>'; return; }
+  box.innerHTML = todos.map((t,i) =>
+    `<div class="todo-item ${t.done?'done':''}" data-i="${i}">
+       <input type="checkbox" ${t.done?'checked':''}>
+       <span class="t-text">${esc(t.text)}</span>
+       <button class="t-del" title="删除">✕</button>
+     </div>`).join('');
+  box.querySelectorAll('.todo-item').forEach(item => {
+    const i = +item.dataset.i;
+    item.querySelector('input').onchange = () => { toggleTodo(i); };
+    item.querySelector('.t-del').onclick = () => { delTodo(i); };
+  });
+}
+function getOrCreateLog(date){
+  let l = getLog(date);
+  if(!l){ l = {date, hours:0, work:'', learning:'', problems:'', plan:'', sticker:null, shift:null, todos:[]}; logs.push(l); }
+  return l;
+}
+function persistTodos(){
+  saveJSON(LS_LOGS, logs);
+  renderTodos(currentDate); renderAll();
+}
+function addTodo(){
+  const t = $('todoInput').value.trim();
+  if(!t) return;
+  getOrCreateLog(currentDate).todos.push({text:t, done:false});
+  $('todoInput').value='';
+  persistTodos();
+}
+function toggleTodo(i){
+  const l = getLog(currentDate); if(!l) return;
+  l.todos[i].done = !l.todos[i].done;
+  persistTodos();
+}
+function delTodo(i){
+  const l = getLog(currentDate); if(!l) return;
+  l.todos.splice(i,1);
+  persistTodos();
+}
+
+/* ---------- 目录 / 翻页 ---------- */
+function openIndex(){
+  const list = contentLogs().sort((a,b)=> b.date.localeCompare(a.date));
+  if(!list.length){
+    openModal('目录', '<p style="text-align:center;color:var(--ink2);">还没有日志~</p>', [{label:'关闭', onClick:closeModal}]);
+    return;
+  }
+  const html = `<div class="idx-list">` + list.map(l =>
+    `<div class="idx-item" data-date="${l.date}">
+       <span class="idx-sticker">${stickerEmoji(l.sticker)}</span>
+       <span class="idx-date">${l.date}</span>
+       <span class="idx-snippet">${esc((l.work||'').split('\n')[0].slice(0,26))}</span>
+     </div>`).join('') + `</div>`;
+  openModal('日志目录', html, [{label:'关闭', cls:'ghost', onClick:closeModal}]);
+  document.querySelectorAll('.idx-item').forEach(item => {
+    item.onclick = () => { closeModal(); loadEditor(item.dataset.date); renderList(); };
+  });
+}
+function visibleDatesAsc(){ return contentLogs().map(l=>l.date).sort(); }
+function prevLog(){
+  const ds = visibleDatesAsc().filter(d => d < currentDate);
+  if(ds.length){ loadEditor(ds[ds.length-1]); renderList(); } else toast('没有更早的日志了');
+}
+function nextLog(){
+  const ds = visibleDatesAsc().filter(d => d > currentDate);
+  if(ds.length){ loadEditor(ds[0]); renderList(); } else toast('没有更新的日志了');
+}
+
+/* ---------- 每周排班表 ---------- */
+function mondayOf(offset){
+  const now = new Date(); now.setHours(0,0,0,0);
+  const day = (now.getDay()+6)%7;           // 周一=0
+  return addDays(now, -day + offset*7);
+}
+function openSchedule(){
+  schedOffset = 0;
+  openModal('每周排班表', '', []);
+  renderSchedule();
+}
+function renderSchedule(){
+  const mon = mondayOf(schedOffset);
+  const today = todayStr();
+  let html = `<div class="sched-nav">
+      <button class="small ghost" onclick="shiftWeek(-1)">‹ 上一周</button>
+      <button class="small ghost" onclick="shiftWeek(0)">本周</button>
+      <button class="small ghost" onclick="shiftWeek(1)">下一周 ›</button>
+    </div><div class="sched-grid">`;
+  for(let i=0; i<7; i++){
+    const d = addDays(mon, i); const ds = fmtDate(d);
+    const cur = shifts[ds] || '';
+    const isToday = ds === today;
+    html += `<div class="sched-day ${isToday?'today':''}">
+      <div class="sched-date">${WEEK_NAMES[i]} ${d.getDate()}日 ${isToday?'<span class="today-tag">·今天</span>':''}</div>
+      ${['早','晚','休'].map(s =>
+        `<button class="sched-btn ${s==='早'?'early':s==='晚'?'late':'rest'} ${cur===s?'on':''}"
+                 onclick="toggleShift('${ds}','${s}')">${s}班</button>`).join('')}
+    </div>`;
+  }
+  html += `</div><div class="sched-import">
+      <div class="si-btns">
+        <button class="small primary" id="btnPreset">导入预置排班</button>
+      </div>
+      <textarea id="presetText" rows="4" placeholder="粘贴自定义排班，每行一条，如：&#10;周一 早&#10;周二 晚&#10;2026-09-25 休"></textarea>
+      <div class="si-btns"><button class="small primary" onclick="importPreset()">应用自定义排班</button></div>
+    </div>`;
+  $('modalBody').innerHTML = html;
+  $('btnPreset').onclick = applyPreset;
+}
+function shiftWeek(n){ schedOffset += n; renderSchedule(); }
+function toggleShift(ds, s){
+  if(shifts[ds] === s) delete shifts[ds];
+  else shifts[ds] = s;
+  saveJSON(LS_SHIFTS, shifts);
+  renderSchedule(); renderAll();
+}
+/* 解析排班文本：每行 "周一 早" 或 "2026-09-25 休" */
+function parseScheduleText(text){
+  const mon = mondayOf(schedOffset);
+  const map = {};
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim(); if(!line) return;
+    const parts = line.split(/[\s,，、:：]+/).filter(Boolean);
+    if(parts.length < 2) return;
+    const [dayKey, shift] = parts;
+    if(!['早','晚','休'].includes(shift)) return;
+    let date = null;
+    if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(dayKey)) date = dayKey;
+    else if(/^周[一二三四五六日天]$/.test(dayKey)){
+      const idx = '一二三四五六日天'.indexOf(dayKey[1]);
+      const dayOfWeek = idx === 6 ? 6 : idx;   // 天/日 = 周日
+      date = fmtDate(addDays(mon, dayOfWeek));
+    } else if(/^星期[一二三四五六日天]$/.test(dayKey)){
+      const idx = '一二三四五六日天'.indexOf(dayKey[2]);
+      const dayOfWeek = idx === 6 ? 6 : idx;
+      date = fmtDate(addDays(mon, dayOfWeek));
+    }
+    if(date) map[date] = shift;
+  });
+  return map;
+}
+function applyPreset(){
+  const text = $('presetText') ? $('presetText').value.trim() : '';
+  let map;
+  if(text){
+    map = parseScheduleText(text);
+  } else {
+    // 内置预置排班（一一继任示例：周一至周日）
+    const mon = mondayOf(schedOffset);
+    const preset = ['早','早','晚','休','晚','休','休'];
+    map = {};
+    for(let i=0;i<7;i++) map[fmtDate(addDays(mon,i))] = preset[i];
+  }
+  Object.assign(shifts, map);
+  saveJSON(LS_SHIFTS, shifts);
+  const n = Object.keys(map).length;
+  renderSchedule(); renderAll();
+  const btn = $('btnPreset');
+  btn.textContent = '✅ 已导入 ' + n + ' 天排班';
+  setTimeout(()=>{ if(btn) btn.textContent = '导入预置排班'; }, 2500);
+}
+function importPreset(){
+  const text = $('presetText') ? $('presetText').value.trim() : '';
+  if(!text){ toast('请先粘贴排班内容'); return; }
+  const map = parseScheduleText(text);
+  const n = Object.keys(map).length;
+  if(!n){ toast('没有识别到有效排班，格式如：周一 早'); return; }
+  Object.assign(shifts, map);
+  saveJSON(LS_SHIFTS, shifts);
+  renderSchedule(); renderAll();
+  toast('已导入 ' + n + ' 天排班');
+}
+
+/* ---------- 导出 ---------- */
+function exportLogs(){
+  const list = contentLogs().sort((a,b)=> a.date.localeCompare(b.date));
+  if(!list.length){ toast('还没有可导出的日志'); return; }
+  const parts = list.map(l => {
+    const st = l.shift || shifts[l.date] || '';
+    return [
+      '===== ' + l.date + ' =====',
+      '心情：' + (l.sticker || '无'),
+      '班次：' + (st ? st+'班' : '未排班'),
+      '工时：' + (l.hours || 0) + '小时',
+      '今日工作内容：',
+      l.work || '',
+      '复盘与心得：',
+      l.learning || '',
+      '遇到的问题：',
+      l.problems || '',
+      '明日计划：',
+      l.plan || ''
+    ].join('\n');
+  });
+  const content = parts.join('\n\n');
+  const blob = new Blob(['\ufeff' + content], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  const d = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = '实习日志导出_' + todayStr() + '.txt';
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
+  toast('导出成功', '共 ' + list.length + ' 篇日志');
+}
+
+/* ---------- TXT 导入 ---------- */
+function openFileImport(){ $('fileImport').click(); }
+function handleImport(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const map = parseTxt(String(reader.result));
+    if(!map.work && !map.learning && !map.problems && !map.plan){
+      toast('未识别到有效内容，请确认是导出的 TXT 格式'); return;
+    }
+    if(map.date) $('inDate').value = map.date;
+    $('inHours').value = map.hours != null ? map.hours : $('inHours').value;
+    $('inWork').value = map.work || '';
+    $('inLearning').value = map.learning || '';
+    $('inProblems').value = map.problems || '';
+    $('inPlan').value = map.plan || '';
+    if(map.sticker && STICKERS.find(s=>s.name===map.sticker)){ selectedSticker = map.sticker; updateStickerUI(); }
+    if(map.shift){ selectedShift = map.shift; updateShiftUI(); }
+    dirty = true; setSaveState('saving');
+    clearTimeout(saveTimer); saveTimer = setTimeout(()=> saveNow(false), 1200);
+    toast('导入成功', '请检查内容后保存');
+  };
+  reader.readAsText(file, 'utf-8');
+}
+/* 解析导出的 TXT 格式（字段顺序状态机） */
+function parseTxt(text){
+  const res = {};
+  const lines = text.split(/\r?\n/);
+  const FIELD_HEAD = /^(心情|班次|工时|今日工作内容|复盘与心得|遇到的问题|明日计划|日期)[：:](.*)$/;
+  let cur = null, buf = [];
+  const flush = () => { if(cur){ res[cur] = buf.join('\n').trim(); buf = []; } };
+  lines.forEach(line => {
+    if(/^={3,}/.test(line.trim())){ flush(); cur = null; return; }
+    const m = line.match(FIELD_HEAD);
+    if(m){
+      flush();
+      const k = m[1], v = m[2].trim();
+      if(k === '心情') res.sticker = v === '无' ? null : v;
+      else if(k === '班次'){ const s = v.replace('班',''); res.shift = ['早','晚','休'].includes(s) ? s : null; }
+      else if(k === '工时'){ const h = parseFloat(v); res.hours = isNaN(h) ? 0 : h; }
+      else if(k === '日期') res.date = v;
+      else { cur = {今日工作内容:'work', 复盘与心得:'learning', 遇到的问题:'problems', 明日计划:'plan'}[k]; if(v) buf.push(v); }
+    } else if(cur){ buf.push(line); }
+  });
+  flush();
+  return res;
+}
+
+/* ---------- GitHub Gist 云同步 ---------- */
+function openSync(){
+  const token = localStorage.getItem(LS_TOKEN) || '';
+  const gid = localStorage.getItem(LS_GID) || '';
+  const html = `
+    <label class="mf">GitHub Token（需勾选 gist 权限）</label>
+    <input type="password" id="inToken" value="${esc(token)}" placeholder="ghp_xxxxxxxxxxxx">
+    <label class="mf">Gist ID（首次上传留空，自动创建）</label>
+    <input type="text" id="inGid" value="${esc(gid)}" placeholder="留空则自动创建">
+    <p class="m-hint">Token 与 Gist ID 仅保存在你的浏览器本地。电脑和平板填写相同的 Token 与 Gist ID 即可多设备同步。</p>
+    <div class="modal-btns" style="margin-top:12px;">
+      <button class="primary" onclick="gistUpload()">☁ 上传到云端</button>
+      <button class="ghost" onclick="gistDownload()">↓ 从云端下载</button>
+    </div>`;
+  openModal('☁ 云同步（GitHub Gist）', html, [{label:'关闭', cls:'ghost', onClick:closeModal}]);
+}
+function syncCreds(){
+  const t = ($('inToken') ? $('inToken').value : '').trim();
+  const g = ($('inGid') ? $('inGid').value : '').trim();
+  if(t) localStorage.setItem(LS_TOKEN, t); else localStorage.removeItem(LS_TOKEN);
+  if(g) localStorage.setItem(LS_GID, g); else localStorage.removeItem(LS_GID);
+  return {token:t, gid:g};
+}
+function syncPayload(){
+  return {version:1, updatedAt:new Date().toISOString(), data:{
+    [LS_LOGS]: logs, [LS_SHIFTS]: shifts, [LS_FONT]: fontPref
+  }};
+}
+async function gistUpload(){
+  const {token, gid} = syncCreds();
+  if(!token){ toast('请填写 GitHub Token'); return; }
+  const body = {
+    description: '实习日志手账本备份',
+    public: false,
+    files: { 'internship-journal.json': { content: JSON.stringify(syncPayload()) } }
+  };
+  try{
+    const url = gid ? 'https://api.github.com/gists/' + gid : 'https://api.github.com/gists';
+    const method = gid ? 'PATCH' : 'POST';
+    const r = await fetch(url, {
+      method,
+      headers: {Authorization:'token '+token, 'Content-Type':'application/json', 'Accept':'application/vnd.github+json'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.message || ('HTTP '+r.status)); }
+    const j = await r.json();
+    localStorage.setItem(LS_GID, j.id);
+    if($('inGid')) $('inGid').value = j.id;
+    toast('上传成功', 'Gist ID: ' + j.id);
+  }catch(err){
+    openModal('上传失败', '<p style="text-align:center;color:var(--danger2);">'+esc(err.message)+'</p><p class="m-hint" style="text-align:center;">请检查 Token 是否有效、是否勾选 gist 权限，以及网络是否可访问 github.com。</p>', [{label:'好的', cls:'primary', onClick:closeModal}]);
+  }
+}
+async function gistDownload(){
+  const {token, gid} = syncCreds();
+  if(!gid){ toast('请先填写 Gist ID'); return; }
+  try{
+    const headers = {};
+    if(token) headers.Authorization = 'token ' + token;
+    const r = await fetch('https://api.github.com/gists/' + gid, {headers});
+    if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.message || ('HTTP '+r.status)); }
+    const j = await r.json();
+    const file = j.files['internship-journal.json'];
+    if(!file){ throw new Error('该 Gist 中没有 internship-journal.json'); }
+    const payload = JSON.parse(file.content);
+    const data = payload.data || {};
+    if(data[LS_LOGS]){ logs = data[LS_LOGS]; saveJSON(LS_LOGS, logs); }
+    if(data[LS_SHIFTS]){ shifts = data[LS_SHIFTS]; saveJSON(LS_SHIFTS, shifts); }
+    if(data[LS_FONT]){ applyFont(data[LS_FONT]); }
+    loadEditor(todayStr()); renderAll();
+    toast('下载成功', '云端数据已同步到本地');
+  }catch(err){
+    openModal('下载失败', '<p style="text-align:center;color:var(--danger2);">'+esc(err.message)+'</p><p class="m-hint" style="text-align:center;">请检查 Gist ID 是否正确、网络是否可访问 github.com。</p>', [{label:'好的', cls:'primary', onClick:closeModal}]);
+  }
+}
+
+/* ---------- 统一刷新 ---------- */
+function renderAll(){
+  renderStats(); renderList(); renderCalendar(); renderTodos(currentDate);
+}
+
+/* ---------- 事件绑定 ---------- */
+function bindEvents(){
+  $('btnNew').onclick = () => { if(dirty) saveNow(false); loadEditor(todayStr()); renderList(); };
+  $('btnClear').onclick = clearContent;
+  $('btnSave').onclick = saveClick;
+  $('btnDelete').onclick = deleteLog;
+  $('inDate').onchange = onDateChange;
+  $('inHours').oninput = onEditorInput;
+  ED_FIELDS.forEach(f => $(f === 'work' ? 'inWork' : 'in'+f.charAt(0).toUpperCase()+f.slice(1)).addEventListener('input', onEditorInput));
+  $('btnExport').onclick = exportLogs;
+  $('btnSync').onclick = openSync;
+  $('btnSchedule').onclick = openSchedule;
+  $('btnImportTxt').onclick = openFileImport;
+  $('fileImport').onchange = e => { if(e.target.files[0]) handleImport(e.target.files[0]); e.target.value=''; };
+  $('searchInput').oninput = renderList;
+  $('btnListView').onclick = () => switchView('list');
+  $('btnCalView').onclick = () => switchView('calendar');
+  $('calPrev').onclick = calPrev;
+  $('calNext').onclick = calNext;
+  $('calToday').onclick = calGoToday;
+  $('btnAddTodo').onclick = addTodo;
+  $('todoInput').onkeydown = e => { if(e.key === 'Enter') addTodo(); };
+  $('btnIndex').onclick = openIndex;
+  $('btnPrev').onclick = prevLog;
+  $('btnNext').onclick = nextLog;
+  // 关闭/刷新/跳转时自动保存
+  window.addEventListener('beforeunload', () => {
+    if(dirty){
+      saveNow(false);
+      localStorage.setItem('pending-unload-save', '1');
+    }
+  });
+}
+
+/* ---------- 初始化 ---------- */
+function init(){
+  applyFont(fontPref);
+  initCal();
+  renderStickers();
+  // 上次关闭时若有未保存内容被自动保存，进入时提示
+  if(localStorage.getItem('pending-unload-save')){
+    localStorage.removeItem('pending-unload-save');
+    setTimeout(()=> toast('检测到内容尚未保存，已自动为你保存当前日志'), 300);
+  }
+  loadEditor(currentDate);
+  bindEvents();
+  renderAll();
+}
+init();
+</script>
+</body>
+</html>
