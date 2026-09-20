@@ -701,9 +701,40 @@ const STICKERS = [
 ];
 const WEEK_NAMES = ['周一','周二','周三','周四','周五','周六','周日'];
 
+/* 预置排班（8.31 – 11.01，2026 年）：标准班=早，晚班=晚，休息=休 */
+const DEFAULT_SHIFTS = {
+  '2026-08-31':'早','2026-09-01':'早','2026-09-02':'早','2026-09-03':'早',
+  '2026-09-04':'休','2026-09-05':'休',
+  '2026-09-06':'晚','2026-09-07':'早','2026-09-08':'早','2026-09-09':'早',
+  '2026-09-10':'晚','2026-09-11':'休','2026-09-12':'休',
+  '2026-09-13':'晚','2026-09-14':'早','2026-09-15':'早',
+  '2026-09-16':'晚','2026-09-17':'晚','2026-09-18':'休','2026-09-19':'休',
+  '2026-09-20':'晚','2026-09-21':'晚','2026-09-22':'晚','2026-09-23':'晚',
+  '2026-09-24':'晚','2026-09-25':'休',
+  '2026-09-26':'晚','2026-09-27':'晚','2026-09-28':'早',
+  '2026-09-29':'休','2026-09-30':'休',
+  '2026-10-01':'晚','2026-10-02':'晚','2026-10-03':'晚','2026-10-04':'晚',
+  '2026-10-05':'休','2026-10-06':'休','2026-10-07':'休','2026-10-08':'休',
+  '2026-10-09':'晚','2026-10-10':'晚','2026-10-11':'休',
+  '2026-10-12':'早','2026-10-13':'早','2026-10-14':'早','2026-10-15':'早',
+  '2026-10-16':'休','2026-10-17':'休',
+  '2026-10-18':'晚','2026-10-19':'晚','2026-10-20':'晚','2026-10-21':'晚',
+  '2026-10-22':'晚','2026-10-23':'休','2026-10-24':'休',
+  '2026-10-25':'晚',
+  '2026-10-26':'早','2026-10-27':'早','2026-10-28':'早','2026-10-29':'早',
+  '2026-10-30':'休','2026-10-31':'休',
+  '2026-11-01':'晚'
+};
+
 /* ---------- 状态 ---------- */
 let logs = loadJSON(LS_LOGS, []);
 let shifts = loadJSON(LS_SHIFTS, {});
+/* 首次加载时，把预置排班写入（不覆盖已有数据，仅补全缺失日期） */
+const defaultCount = Object.keys(DEFAULT_SHIFTS).filter(k => !shifts[k]).length;
+if(defaultCount){
+  Object.assign(shifts, DEFAULT_SHIFTS);
+  saveJSON(LS_SHIFTS, shifts);
+}
 let currentDate = todayStr();
 let selectedShift = null;   // '早' | '晚' | '休' | null
 let selectedSticker = null;
@@ -1141,7 +1172,7 @@ function renderSchedule(){
       <div class="si-btns">
         <button class="small primary" id="btnPreset">导入预置排班</button>
       </div>
-      <textarea id="presetText" rows="4" placeholder="粘贴自定义排班，每行一条，如：&#10;周一 早&#10;周二 晚&#10;2026-09-25 休"></textarea>
+      <textarea id="presetText" rows="5" placeholder="粘贴排班，每行一条，支持：&#10;8/31 周日｜标准班&#10;9/06 周六｜晚班&#10;9/04 周四｜休息&#10;或：周一 早 / 2026-09-25 休"></textarea>
       <div class="si-btns"><button class="small primary" onclick="importPreset()">应用自定义排班</button></div>
     </div>`;
   $('modalBody').innerHTML = html;
@@ -1154,28 +1185,42 @@ function toggleShift(ds, s){
   saveJSON(LS_SHIFTS, shifts);
   renderSchedule(); renderAll();
 }
-/* 解析排班文本：每行 "周一 早" 或 "2026-09-25 休" */
+/* 解析排班文本，支持：
+   - "周一 早" / "星期一 晚"（当周）
+   - "2026-09-25 休" / "9/25 休"
+   - "8/31 周日｜标准班" / "9/01 周一|晚班" / "9/04 周四｜休息" */
 function parseScheduleText(text){
   const mon = mondayOf(schedOffset);
+  const year = new Date().getFullYear();
   const map = {};
+  const shiftOf = s => {
+    if(['早','晚','休'].includes(s)) return s;
+    if(s === '标准班' || s === '早班') return '早';
+    if(s === '晚班') return '晚';
+    if(s === '休息' || s === '休班') return '休';
+    return null;
+  };
   text.split(/\r?\n/).forEach(line => {
     line = line.trim(); if(!line) return;
-    const parts = line.split(/[\s,，、:：]+/).filter(Boolean);
+    const parts = line.split(/[\s,，、:：|｜]+/).filter(Boolean);
     if(parts.length < 2) return;
-    const [dayKey, shift] = parts;
-    if(!['早','晚','休'].includes(shift)) return;
+    const [dayKey, shift] = [parts[0], parts[parts.length - 1]];
+    const s = shiftOf(shift); if(!s) return;
     let date = null;
     if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(dayKey)) date = dayKey;
-    else if(/^周[一二三四五六日天]$/.test(dayKey)){
+    else if(/^\d{1,2}\/\d{1,2}$/.test(dayKey)){
+      const [m, d] = dayKey.split('/').map(Number);
+      date = year + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    } else if(/^周[一二三四五六日天]$/.test(dayKey)){
       const idx = '一二三四五六日天'.indexOf(dayKey[1]);
-      const dayOfWeek = idx === 6 ? 6 : idx;   // 天/日 = 周日
+      const dayOfWeek = idx === 6 ? 6 : idx;
       date = fmtDate(addDays(mon, dayOfWeek));
     } else if(/^星期[一二三四五六日天]$/.test(dayKey)){
       const idx = '一二三四五六日天'.indexOf(dayKey[2]);
       const dayOfWeek = idx === 6 ? 6 : idx;
       date = fmtDate(addDays(mon, dayOfWeek));
     }
-    if(date) map[date] = shift;
+    if(date) map[date] = s;
   });
   return map;
 }
