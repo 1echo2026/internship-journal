@@ -40,6 +40,7 @@ body{
   font-size:15px;
   line-height:1.6;
   padding:18px 12px 30px;
+  overflow-x:hidden;   /* 防止横向溢出滚动条 */
 }
 /* ---------- 巴洛克卷草纹 四角 ---------- */
 .orn{ position:fixed; width:150px; height:150px; opacity:.32; pointer-events:none; z-index:0; }
@@ -316,6 +317,12 @@ textarea#inWork{ min-height:110px; }
 
 /* 编辑区底部按钮 */
 .editor-foot{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+
+/* ---------- 溢出防护：允许收缩（防止窄屏被撑宽超出背景） ---------- */
+main > *, aside > section, .log-item, .todo-item, .sticker-row,
+.row-actions, .view-switch, .editor-meta, .editor-head, .font-row,
+.editor-foot, .shift-btns{ min-width:0; }
+.panel{ min-width:0; }
 
 /* ---------- 页脚 ---------- */
 footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px; letter-spacing:2px; }
