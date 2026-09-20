@@ -188,7 +188,7 @@ main{
 .log-item.active{ border-color:var(--gold); background:#f1e2b8; box-shadow:0 0 0 2px rgba(166,124,46,.2); }
 .log-item .li-top{ display:flex; align-items:center; gap:6px; font-size:13px; }
 .log-item .li-date{ font-weight:bold; color:var(--ink); }
-.log-item .li-sticker{ font-size:16px; }
+.log-item .li-sticker{ width:18px; height:18px; object-fit:contain; flex:0 0 auto; }
 .log-item .li-shift{ font-size:11px; color:var(--btn-text); border-radius:4px; padding:0 5px; }
 .log-item .li-hours{ font-size:11px; color:var(--ink2); margin-left:auto; }
 .log-item .li-snippet{
@@ -222,7 +222,7 @@ main{
 .cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
 .cal-num{ position:absolute; top:3px; left:6px; font-size:12px; color:var(--ink); }
 .cal-num.holiday{ color:#c05a5a; }
-.cal-sticker{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; pointer-events:none; }
+.cal-sticker{ position:absolute; inset:0; margin:auto; width:72%; height:72%; object-fit:contain; pointer-events:none; }
 .cal-stamp{
   position:absolute; top:2px; right:4px;
   font-family:'KaiTi','STKaiti','楷体',serif; font-size:12px;
@@ -311,6 +311,7 @@ textarea#inWork{ min-height:110px; }
   border-radius:10px; cursor:pointer; font-size:22px;
   transition:border-color .12s, background .12s, transform .12s;
 }
+.sticker-chip img{ width:38px; height:38px; object-fit:contain; display:block; }
 .sticker-chip .n{ font-size:11px; color:var(--ink2); white-space:nowrap; }
 .sticker-chip:hover{ border-color:var(--gold); }
 .sticker-chip.sel{ border-color:var(--gold); background:#f1e2b8; box-shadow:0 0 0 2px rgba(166,124,46,.25); transform:translateY(-2px); }
@@ -370,7 +371,7 @@ footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px
 }
 .idx-item:hover{ border-color:var(--gold); }
 .idx-item .idx-date{ font-weight:bold; }
-.idx-item .idx-sticker{ font-size:16px; }
+.idx-item .idx-sticker{ width:18px; height:18px; object-fit:contain; flex:0 0 auto; }
 .idx-item .idx-snippet{ color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
 
 /* 排班面板 */
@@ -443,13 +444,14 @@ footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px
   .editor-foot button{ flex:1; }
 
   .cal-cell{ height:60px; }
-  .cal-sticker{ font-size:24px; }
+  .cal-sticker{ width:66%; height:66%; }
   .editor-meta .field:last-child{ flex:1 1 100%; }
   .shift-btns{ flex-direction:row; width:100%; }
   .shift-btn{ flex:1; padding:10px 0; }
   .sched-grid{ grid-template-columns:repeat(2,1fr); }
   .stats{ gap:5px; }
-  .sticker-chip{ padding:8px 10px; font-size:26px; }
+  .sticker-chip{ padding:8px 10px; }
+  .sticker-chip img{ width:44px; height:44px; }
 }
 </style>
 </head>
@@ -684,17 +686,18 @@ const LS_GID    = 'sync-gist-id';
 const DAY_SALARY = 120;          // 日薪 120元/天
 const SHIFT_COLORS = {早:'early', 晚:'late', 休:'rest'};
 
-/* 18 个心情贴图（原神风表情包） */
+/* 17 个心情贴图（原神风表情包，存放于 assets/stickers） */
+const STICKER_BASE = 'assets/stickers/';
 const STICKERS = [
-  {name:'拜托拜托', emoji:'🙏'}, {name:'抱大腿', emoji:'🦵'},
-  {name:'吃惊', emoji:'😲'},     {name:'呆呆', emoji:'😶'},
-  {name:'肚子好饿', emoji:'🍽️'}, {name:'干饭时间', emoji:'🍚'},
-  {name:'干劲满满', emoji:'💪'}, {name:'开心团建', emoji:'🎉'},
-  {name:'囊中羞涩', emoji:'🪙'}, {name:'平平淡淡', emoji:'🌤️'},
-  {name:'轻松完成', emoji:'😌'}, {name:'身体被掏空', emoji:'🫠'},
-  {name:'收货满满', emoji:'📦'}, {name:'想骂人', emoji:'😤'},
-  {name:'压力山大', emoji:'😩'}, {name:'要没钱了', emoji:'💸'},
-  {name:'长舒口气', emoji:'😮‍💨'}, {name:'摸鱼中', emoji:'🐟'}
+  {name:'拜托拜托', img:'baituo.png'},   {name:'抱大腿', img:'baodatui.png'},
+  {name:'吃惊', img:'chijing.png'},      {name:'呆呆', img:'daidai.png'},
+  {name:'肚子好饿', img:'duzi.png'},     {name:'干饭时间', img:'ganfan.png'},
+  {name:'干劲满满', img:'ganjin.png'},   {name:'开心团建', img:'kaixin.png'},
+  {name:'囊中羞涩', img:'nangzhong.png'},{name:'平平淡淡', img:'pingdan.png'},
+  {name:'轻松完成', img:'qingsong.png'}, {name:'身体被掏空', img:'shenti.png'},
+  {name:'收货满满', img:'shouhuo.png'},  {name:'想骂人', img:'xiangma.png'},
+  {name:'压力山大', img:'yali.png'},     {name:'要没钱了', img:'meiqian.png'},
+  {name:'长舒口气', img:'changshu.png'}
 ];
 const WEEK_NAMES = ['周一','周二','周三','周四','周五','周六','周日'];
 
@@ -890,7 +893,7 @@ function renderStickers(){
   const row = $('stickerRow');
   row.innerHTML = STICKERS.map(s =>
     `<div class="sticker-chip ${selectedSticker === s.name ? 'sel':''}" data-name="${s.name}" title="${s.name}">
-       <span>${s.emoji}</span><span class="n">${s.name}</span>
+       <img src="${STICKER_BASE}${s.img}" alt="${s.name}" loading="lazy"><span class="n">${s.name}</span>
      </div>`).join('');
   row.querySelectorAll('.sticker-chip').forEach(chip => {
     chip.onclick = () => {
@@ -904,7 +907,11 @@ function updateStickerUI(){
     chip.classList.toggle('sel', chip.dataset.name === selectedSticker);
   });
 }
-function stickerEmoji(name){ const s = STICKERS.find(x => x.name === name); return s ? s.emoji : ''; }
+function stickerImg(name, cls){
+  const s = STICKERS.find(x => x.name === name);
+  if(!s) return '';
+  return `<img class="${cls}" src="${STICKER_BASE}${s.img}" alt="${name}" loading="lazy">`;
+}
 
 /* ---------- 字体切换 ---------- */
 function applyFont(f){
@@ -938,7 +945,7 @@ function renderList(){
     const firstLine = (l.work||'').split('\n')[0].trim();
     return `<div class="log-item ${l.date === currentDate ? 'active':''}" data-date="${l.date}">
       <div class="li-top">
-        <span class="li-sticker">${stickerEmoji(l.sticker)}</span>
+        ${stickerImg(l.sticker,'li-sticker')}
         <span class="li-date">${l.date}</span>
         ${stamp}
         <span class="li-hours">${l.hours ? l.hours+'h' : ''}</span>
@@ -990,7 +997,7 @@ function renderCalendarInner(grid){
     const stamp = shifts[ds] && SHIFT_COLORS[shifts[ds]]
       ? `<span class="cal-stamp ${SHIFT_COLORS[shifts[ds]]}">${shifts[ds]}</span>` : '';
     const sticker = l && l.sticker
-      ? `<span class="cal-sticker">${stickerEmoji(l.sticker)}</span>` : '';
+      ? stickerImg(l.sticker,'cal-sticker') : '';
     html += `<div class="${cls.join(' ')}" data-date="${ds}">
       <span class="${numCls}">${d}</span>${stamp}${sticker}
     </div>`;
@@ -1081,7 +1088,7 @@ function openIndex(){
   }
   const html = `<div class="idx-list">` + list.map(l =>
     `<div class="idx-item" data-date="${l.date}">
-       <span class="idx-sticker">${stickerEmoji(l.sticker)}</span>
+       ${stickerImg(l.sticker,'idx-sticker')}
        <span class="idx-date">${l.date}</span>
        <span class="idx-snippet">${esc((l.work||'').split('\n')[0].slice(0,26))}</span>
      </div>`).join('') + `</div>`;
