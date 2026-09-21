@@ -1162,7 +1162,7 @@ function renderSchedule(){
     const cur = shifts[ds] || '';
     const isToday = ds === today;
     html += `<div class="sched-day ${isToday?'today':''}">
-      <div class="sched-date">${WEEK_NAMES[i]} ${d.getDate()}日 ${isToday?'<span class="today-tag">·今天</span>':''}</div>
+      <div class="sched-date">${WEEK_NAMES[i]} ${d.getMonth()+1}/${d.getDate()} ${isToday?'<span class="today-tag">·今天</span>':''}</div>
       ${['早','晚','休'].map(s =>
         `<button class="sched-btn ${s==='早'?'early':s==='晚'?'late':'rest'} ${cur===s?'on':''}"
                  onclick="toggleShift('${ds}','${s}')">${s}班</button>`).join('')}
