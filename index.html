@@ -190,6 +190,7 @@ main{
 .log-item .li-date{ font-weight:bold; color:var(--ink); }
 .log-item .li-sticker{ width:18px; height:18px; object-fit:contain; flex:0 0 auto; }
 .log-item .li-shift{ font-size:11px; color:var(--btn-text); border-radius:4px; padding:0 5px; }
+.log-item .li-photo{ font-size:11px; color:var(--ink2); }
 .log-item .li-hours{ font-size:11px; color:var(--ink2); margin-left:auto; }
 .log-item .li-snippet{
   font-size:12px; color:var(--ink2); margin-top:2px; overflow:hidden;
@@ -319,6 +320,23 @@ textarea#inWork{ min-height:110px; }
 /* 编辑区底部按钮 */
 .editor-foot{ display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
 
+/* 照片 */
+.photo-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.photo-row:empty{ display:none; }
+.photo-thumb{
+  position:relative; width:76px; height:76px; border-radius:8px; overflow:hidden;
+  border:1.5px solid var(--line); background:var(--input);
+}
+.photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in; }
+.photo-thumb .p-del{
+  position:absolute; top:2px; right:2px; width:20px; height:20px; min-height:0; padding:0;
+  font-size:12px; line-height:1; border-radius:50%; cursor:pointer;
+  background:rgba(255,255,255,.92); color:#b4455f;
+  border:1px solid var(--line); box-shadow:none;
+}
+.photo-thumb .p-del:hover{ background:#fff; transform:none; }
+.photo-actions{ display:flex; gap:8px; margin-top:8px; }
+
 /* ---------- 溢出防护：允许收缩（防止窄屏被撑宽超出背景） ---------- */
 main > *, aside > section, .log-item, .todo-item, .sticker-row,
 .row-actions, .view-switch, .editor-meta, .editor-head, .font-row,
@@ -395,6 +413,13 @@ footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px
 .sched-btn.rest{ background:linear-gradient(180deg,var(--rest1),var(--rest2)); }
 .sched-import{ border-top:1px dashed var(--line); padding-top:12px; display:flex; flex-direction:column; gap:8px; }
 .sched-import .si-btns{ display:flex; gap:8px; flex-wrap:wrap; }
+.sched-salary{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px;
+  border-top:1px dashed var(--line); padding-top:12px; }
+.sched-salary .ss-lab{ font-size:13px; color:var(--ink2); letter-spacing:1px; }
+.sched-salary .ss-unit{ font-size:13px; color:var(--ink2); }
+.sched-salary input{ width:96px; padding:7px 10px; border:1px solid var(--line); border-radius:7px;
+  background:var(--input); color:var(--ink); font-size:14px; font-family:inherit; outline:none; }
+.sched-salary input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(166,124,46,.18); }
 
 /* Toast */
 .toast{
@@ -452,6 +477,10 @@ footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px
   .stats{ gap:5px; }
   .sticker-chip{ padding:8px 10px; }
   .sticker-chip img{ width:44px; height:44px; }
+  .photo-thumb{ width:86px; height:86px; }
+  .photo-thumb .p-del{ width:26px; height:26px; font-size:14px; }
+  .photo-actions button{ width:100%; }
+  .sched-salary input{ width:110px; }
 }
 </style>
 </head>
@@ -534,7 +563,7 @@ footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px
           <div class="stat-box"><div class="num" id="stCount">0</div><div class="lab">日志篇数</div></div>
           <div class="stat-box"><div class="num" id="stHours">0</div><div class="lab">累计工时</div></div>
           <div class="stat-box"><div class="num" id="stWorkdays">0</div><div class="lab">工作日</div></div>
-          <div class="salary-box"><div class="num" id="stSalary">¥0.00</div><div class="lab">累计薪资 · 120元/天</div></div>
+          <div class="salary-box"><div class="num" id="stSalary">¥0.00</div><div class="lab" id="stSalaryLab">累计薪资 · 120元/天</div></div>
         </div>
 
         <!-- 视图切换 -->
@@ -620,6 +649,16 @@ footer{ text-align:center; padding:14px 0 4px; color:var(--ink2); font-size:12px
         <textarea id="inPlan" placeholder="明天打算做什么？"></textarea>
       </div>
 
+      <!-- 照片 -->
+      <div class="edit-block">
+        <div class="eb-label">照片</div>
+        <div class="photo-row" id="photoRow"></div>
+        <div class="photo-actions">
+          <button class="small ghost" id="btnAddPhoto">＋ 添加照片</button>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+      </div>
+
       <!-- 字体切换 -->
       <div class="font-row">
         <span class="fr-lab">字体：</span>
@@ -683,7 +722,9 @@ const LS_SHIFTS = 'intern-shifts-v1';
 const LS_FONT   = 'journal-font';
 const LS_TOKEN  = 'sync-gist-token';
 const LS_GID    = 'sync-gist-id';
-const DAY_SALARY = 120;          // 日薪 120元/天
+const LS_SALARY = 'intern-salary-v1';
+const LS_SEEDED = 'intern-shifts-seeded-v1';   // 预置排班只播种一次
+const DAY_SALARY = 120;          // 默认日薪 120元/天
 const SHIFT_COLORS = {早:'early', 晚:'late', 休:'rest'};
 
 /* 17 个心情贴图（原神风表情包，存放于 assets/stickers） */
@@ -729,15 +770,17 @@ const DEFAULT_SHIFTS = {
 /* ---------- 状态 ---------- */
 let logs = loadJSON(LS_LOGS, []);
 let shifts = loadJSON(LS_SHIFTS, {});
-/* 首次加载时，把预置排班写入（不覆盖已有数据，仅补全缺失日期） */
-const defaultCount = Object.keys(DEFAULT_SHIFTS).filter(k => !shifts[k]).length;
-if(defaultCount){
-  Object.assign(shifts, DEFAULT_SHIFTS);
+let daySalary = +loadJSON(LS_SALARY, DAY_SALARY) || DAY_SALARY;
+/* 预置排班只在首次播种一次，之后用户的增删改不再被覆盖 */
+if(!localStorage.getItem(LS_SEEDED)){
+  Object.keys(DEFAULT_SHIFTS).forEach(k => { if(!shifts[k]) shifts[k] = DEFAULT_SHIFTS[k]; });
   saveJSON(LS_SHIFTS, shifts);
+  localStorage.setItem(LS_SEEDED, '1');
 }
 let currentDate = todayStr();
 let selectedShift = null;   // '早' | '晚' | '休' | null
 let selectedSticker = null;
+let selectedPhotos = [];    // 当前日志的照片 [{name, data}]
 let fontPref = localStorage.getItem(LS_FONT) || 'default';
 let dirty = false;
 let saveTimer = null;
@@ -770,8 +813,8 @@ function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function getLog(date){ return logs.find(l => l.date === date); }
-/* 有正文的日志（列表/统计/导航只用这些） */
-function contentLogs(){ return logs.filter(l => (l.work||'').trim() !== ''); }
+/* 有正文或照片的日志（列表/统计/导航只用这些） */
+function contentLogs(){ return logs.filter(l => (l.work||'').trim() !== '' || (l.photos && l.photos.length > 0)); }
 
 /* ---------- 弹窗系统（复古风格，禁用原生 alert/confirm） ---------- */
 function openModal(title, bodyHTML, buttons){
@@ -819,7 +862,8 @@ function loadEditor(date){
   $('inPlan').value   = log ? log.plan    : '';
   selectedShift = (log && log.shift) || shifts[date] || null;
   selectedSticker = log ? log.sticker : null;
-  updateShiftUI(); updateStickerUI(); renderTodos(date);
+  selectedPhotos = (log && log.photos) ? log.photos.slice() : [];
+  updateShiftUI(); updateStickerUI(); renderPhotos(); renderTodos(date);
   setSaveState('saved');
   dirty = false;
   calSelected = date;
@@ -840,6 +884,7 @@ function readEditor(){
     plan: $('inPlan').value,
     sticker: selectedSticker,
     shift: selectedShift,
+    photos: selectedPhotos.slice(),
     todos: old ? old.todos : []
   };
 }
@@ -863,9 +908,16 @@ function saveNow(showToast){
   clearTimeout(saveTimer);
   const log = readEditor();
   if(!log){ return; }
-  if(!log.work.trim()){ dirty = false; setSaveState('saved'); return; } // 空正文不生成日志
-  upsertLog(log);
-  saveJSON(LS_LOGS, logs); saveJSON(LS_SHIFTS, shifts);
+  const hasContent = !!log.work.trim() || (log.photos && log.photos.length > 0);
+  try{
+    if(hasContent){ upsertLog(log); saveJSON(LS_LOGS, logs); }
+    // 班次改动与正文无关，必须单独落盘（否则没写正文时改班次会丢）
+    saveJSON(LS_SHIFTS, shifts);
+  }catch(e){
+    toast('保存失败', '本地存储空间不足，建议删除部分照片后重试');
+    setSaveState('saving');
+    return;
+  }
   dirty = false; setSaveState('saved');
   renderAll();
   if(showToast) toast('保存成功', '今天也是收获满满的一天呢~');
@@ -887,6 +939,7 @@ function clearContent(){
     $('inHours').value=''; $('inWork').value=''; $('inLearning').value='';
     $('inProblems').value=''; $('inPlan').value='';
     selectedSticker = null; selectedShift = null;
+    selectedPhotos = []; renderPhotos();
     updateStickerUI(); updateShiftUI();
     dirty = true; setSaveState('saving');
     clearTimeout(saveTimer); saveTimer = setTimeout(()=> saveNow(false), 1200);
@@ -944,6 +997,63 @@ function stickerImg(name, cls){
   return `<img class="${cls}" src="${STICKER_BASE}${s.img}" alt="${name}" loading="lazy">`;
 }
 
+/* ---------- 照片 ---------- */
+const MAX_PHOTOS = 9;
+function renderPhotos(){
+  const row = $('photoRow'); if(!row) return;
+  row.innerHTML = selectedPhotos.map((p,i) =>
+    `<div class="photo-thumb" data-i="${i}">
+       <img src="${p.data}" alt="${esc(p.name||'照片')}">
+       <button class="p-del" title="删除">✕</button>
+     </div>`).join('');
+  row.querySelectorAll('.photo-thumb').forEach(el => {
+    const i = +el.dataset.i;
+    el.querySelector('img').onclick = () => viewPhoto(i);
+    el.querySelector('.p-del').onclick = ev => {
+      ev.stopPropagation();
+      selectedPhotos.splice(i,1); renderPhotos(); onEditorInput();
+    };
+  });
+}
+function viewPhoto(i){
+  const p = selectedPhotos[i]; if(!p) return;
+  openModal('照片', `<div style="text-align:center;"><img src="${p.data}" alt="照片" style="max-width:100%;max-height:64vh;border-radius:8px;"></div>`,
+    [{label:'关闭', cls:'ghost', onClick:closeModal}]);
+}
+function addPhotos(files){
+  Array.from(files).forEach(f => {
+    if(!f.type || f.type.indexOf('image/') !== 0){ toast('只能添加图片文件'); return; }
+    if(selectedPhotos.length >= MAX_PHOTOS){ toast('每篇最多 ' + MAX_PHOTOS + ' 张照片'); return; }
+    compressImage(f, data => {
+      if(selectedPhotos.length >= MAX_PHOTOS){ toast('每篇最多 ' + MAX_PHOTOS + ' 张照片'); return; }
+      selectedPhotos.push({name: f.name, data});
+      renderPhotos(); onEditorInput();
+    });
+  });
+}
+/* 压缩后再存，避免占满浏览器本地存储 */
+function compressImage(file, cb){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 1280;
+      let w = img.width, h = img.height;
+      if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = () => toast('这张图片读取失败', '请换一张试试');
+    img.src = reader.result;
+  };
+  reader.onerror = () => toast('图片读取失败');
+  reader.readAsDataURL(file);
+}
+
 /* ---------- 字体切换 ---------- */
 function applyFont(f){
   fontPref = f;
@@ -974,14 +1084,17 @@ function renderList(){
     const stamp = st && SHIFT_COLORS[st]
       ? `<span class="li-shift" style="background:var(--${SHIFT_COLORS[st]}-2);">${st}</span>` : '';
     const firstLine = (l.work||'').split('\n')[0].trim();
+    const photoN = (l.photos && l.photos.length) ? l.photos.length : 0;
+    const badge = photoN ? `<span class="li-photo">📷 ${photoN}</span>` : '';
     return `<div class="log-item ${l.date === currentDate ? 'active':''}" data-date="${l.date}">
       <div class="li-top">
         ${stickerImg(l.sticker,'li-sticker')}
         <span class="li-date">${l.date}</span>
         ${stamp}
+        ${badge}
         <span class="li-hours">${l.hours ? l.hours+'h' : ''}</span>
       </div>
-      <div class="li-snippet">${esc(firstLine)}</div>
+      <div class="li-snippet">${esc(firstLine || (photoN ? '（仅照片）' : ''))}</div>
       <button class="li-del" title="删除">✕</button>
     </div>`;
   }).join('');
@@ -1062,7 +1175,8 @@ function renderStats(){
   let workdays = 0;
   for(const d in shifts){ if(shifts[d] === '早' || shifts[d] === '晚') workdays++; }
   $('stWorkdays').textContent = workdays;
-  $('stSalary').textContent = '¥' + (workdays * DAY_SALARY).toFixed(2);
+  $('stSalary').textContent = '¥' + (workdays * daySalary).toFixed(2);
+  $('stSalaryLab').textContent = '累计薪资 · ' + daySalary + '元/天';
 }
 
 /* ---------- 当日待办 ---------- */
@@ -1174,9 +1288,25 @@ function renderSchedule(){
       </div>
       <textarea id="presetText" rows="5" placeholder="粘贴排班，每行一条，支持：&#10;8/31 周日｜标准班&#10;9/06 周六｜晚班&#10;9/04 周四｜休息&#10;或：周一 早 / 2026-09-25 休"></textarea>
       <div class="si-btns"><button class="small primary" onclick="importPreset()">应用自定义排班</button></div>
+      <div class="sched-salary">
+        <span class="ss-lab">日薪</span>
+        <input type="number" id="inSalary" min="0" step="1" placeholder="120">
+        <span class="ss-unit">元/天</span>
+        <button class="small primary" onclick="saveSalary()">保存日薪</button>
+      </div>
     </div>`;
   $('modalBody').innerHTML = html;
   $('btnPreset').onclick = applyPreset;
+  if($('inSalary')) $('inSalary').value = daySalary;
+}
+/* 修改日薪 */
+function saveSalary(){
+  const v = parseFloat($('inSalary').value);
+  if(isNaN(v) || v < 0){ toast('请输入有效的日薪'); return; }
+  daySalary = v;
+  saveJSON(LS_SALARY, daySalary);
+  renderAll();
+  toast('日薪已更新', '按 ' + daySalary + ' 元/天 计算');
 }
 function shiftWeek(n){ schedOffset += n; renderSchedule(); }
 function toggleShift(ds, s){
@@ -1360,7 +1490,7 @@ function syncCreds(){
 }
 function syncPayload(){
   return {version:1, updatedAt:new Date().toISOString(), data:{
-    [LS_LOGS]: logs, [LS_SHIFTS]: shifts, [LS_FONT]: fontPref
+    [LS_LOGS]: logs, [LS_SHIFTS]: shifts, [LS_FONT]: fontPref, [LS_SALARY]: daySalary
   }};
 }
 async function gistUpload(){
@@ -1404,6 +1534,7 @@ async function gistDownload(){
     if(data[LS_LOGS]){ logs = data[LS_LOGS]; saveJSON(LS_LOGS, logs); }
     if(data[LS_SHIFTS]){ shifts = data[LS_SHIFTS]; saveJSON(LS_SHIFTS, shifts); }
     if(data[LS_FONT]){ applyFont(data[LS_FONT]); }
+    if(data[LS_SALARY] != null){ daySalary = +data[LS_SALARY] || DAY_SALARY; saveJSON(LS_SALARY, daySalary); }
     loadEditor(todayStr()); renderAll();
     toast('下载成功', '云端数据已同步到本地');
   }catch(err){
@@ -1441,6 +1572,8 @@ function bindEvents(){
   $('btnIndex').onclick = openIndex;
   $('btnPrev').onclick = prevLog;
   $('btnNext').onclick = nextLog;
+  $('btnAddPhoto').onclick = () => $('photoInput').click();
+  $('photoInput').onchange = e => { if(e.target.files.length) addPhotos(e.target.files); e.target.value = ''; };
   // 关闭/刷新/跳转时自动保存
   window.addEventListener('beforeunload', () => {
     if(dirty){
